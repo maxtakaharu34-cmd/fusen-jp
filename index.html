@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#fef3c7" />
+<title>付箋メモ</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&family=Kosugi+Maru&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{font-family:"Kosugi Maru",system-ui,sans-serif;color:#3a2a1c;background:#a8825a;background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.04) 0,rgba(0,0,0,.04) 2px,transparent 2px,transparent 8px);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#app{display:flex;flex-direction:column;height:100dvh;padding:10px;gap:8px;max-width:480px;margin:0 auto}
+.title{font-family:"Mochiy Pop P One",sans-serif;font-size:22px;color:#fef3c7;-webkit-text-stroke:2.5px #3a2a1c;paint-order:stroke fill;text-align:center;margin:6px 0}
+.input-row{display:flex;gap:6px}
+.input-row input{flex:1;background:#fef3c7;border:2.5px solid #3a2a1c;border-radius:10px;padding:10px;font-family:inherit;font-size:15px}
+.input-row button{background:#3a2a1c;color:#fef3c7;border:2.5px solid #3a2a1c;border-radius:10px;padding:0 18px;font-family:"Mochiy Pop P One",sans-serif;cursor:pointer}
+.notes{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:6px;align-content:start}
+.note{aspect-ratio:1;border:1px solid rgba(0,0,0,.15);box-shadow:3px 3px 8px rgba(0,0,0,.3);padding:14px 12px 12px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.5;color:#3a2a1c;cursor:grab;transform:rotate(var(--r));transition:transform .2s,box-shadow .2s;position:relative;word-break:break-word;overflow:hidden}
+.note:hover{box-shadow:5px 5px 14px rgba(0,0,0,.4);z-index:5}
+.note .body{flex:1;overflow:hidden;white-space:pre-wrap}
+.note .meta{font-size:9px;opacity:.6;display:flex;justify-content:space-between;align-items:center}
+.note .x{background:transparent;border:0;cursor:pointer;font-size:14px;color:#3a2a1c;opacity:0;transition:opacity .2s;padding:0}
+.note:hover .x{opacity:1}
+.empty{grid-column:1/-1;text-align:center;padding:40px 10px;color:#fef3c7;opacity:.7;font-size:13px;line-height:1.7}
+.actions{display:flex;gap:6px;justify-content:center}
+.actions button{background:#fef3c7;color:#3a2a1c;border:2.5px solid #3a2a1c;padding:8px 16px;border-radius:10px;font-size:11px;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div id="app">
+<h1 class="title">付箋メモ 📝</h1>
+<div class="input-row">
+  <input id="txt" type="text" placeholder="メモを入力..." maxlength="200"/>
+  <button id="btn-add">＋</button>
+</div>
+<div class="notes" id="notes"></div>
+<div class="actions">
+  <button id="btn-clear">↺ 全消去</button>
+  <button id="btn-export">📥 エクスポート</button>
+</div>
+</div>
+<script>
+(()=>{
+'use strict';
+const KEY='fusen_jp_v1';
+const COLORS=['#fef3c7','#fce7f3','#dbeafe','#d1fae5','#ede9fe','#fef9c3','#ffe4e1','#e0f2fe'];
+const $=(id)=>document.getElementById(id);
+let notes=JSON.parse(localStorage.getItem(KEY)||'[]');
+function save(){localStorage.setItem(KEY,JSON.stringify(notes))}
+function render(){
+  const e=$('notes');while(e.firstChild)e.removeChild(e.firstChild);
+  if(notes.length===0){
+    const em=document.createElement('div');em.className='empty';em.textContent='メモを書いて\n＋ボタンで追加してね 📝';e.appendChild(em);return;
+  }
+  notes.forEach((n,i)=>{
+    const d=document.createElement('div');d.className='note';
+    d.style.background=n.c;d.style.setProperty('--r',(((i*37)%9)-4)+'deg');
+    const body=document.createElement('div');body.className='body';body.textContent=n.t;
+    const meta=document.createElement('div');meta.className='meta';
+    const ts=document.createElement('span');ts.textContent=new Date(n.ts).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const x=document.createElement('button');x.className='x';x.textContent='✕';x.title='削除';x.addEventListener('click',()=>{notes.splice(i,1);save();render()});
+    meta.appendChild(ts);meta.appendChild(x);
+    d.appendChild(body);d.appendChild(meta);
+    e.appendChild(d);
+  });
+}
+function add(){
+  const t=$('txt').value.trim();if(!t)return;
+  notes.unshift({t,c:COLORS[Math.floor(Math.random()*COLORS.length)],ts:Date.now()});
+  $('txt').value='';save();render();
+}
+$('btn-add').addEventListener('click',add);
+$('txt').addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+$('btn-clear').addEventListener('click',()=>{if(confirm('全部消す？'))(notes=[],save(),render())});
+$('btn-export').addEventListener('click',()=>{
+  const txt=notes.map(n=>'• '+n.t).join('\n');
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='memo.txt';a.click();
+});
+render();
+})();
+</script>
+</body>
+</html>
